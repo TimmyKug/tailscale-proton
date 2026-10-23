@@ -3,6 +3,10 @@
 An isolated Docker Compose stack: phone → Tailscale → NAS → Proton WireGuard → internet.
 The existing Tailscale installation on the NAS remains separate.
 
+Android runs only Tailscale. The NAS runs the Proton connection, avoiding the
+need for two Android VPN apps at once. This is an independent community project,
+not an official Proton, Tailscale, or TrueNAS application.
+
 ## Requirements
 
 - Linux NAS with Docker Compose and `/dev/net/tun`; Gluetun needs `NET_ADMIN`.
@@ -12,11 +16,15 @@ The existing Tailscale installation on the NAS remains separate.
 ## Setup
 
 1. Copy `.env.example` to `.env`. Choose a unique `TS_HOSTNAME`.
-2. Create `secrets/` with mode 700. Save the Proton config as
-   `secrets/proton.conf` with mode 600. Do not commit it.
+2. Generate a WireGuard configuration in your
+   [Proton account](https://protonvpn.com/support/wireguard-configurations).
+   Create `secrets/` with mode 700. Save the config as `secrets/proton.conf`
+   with mode 600. Do not commit it.
 3. Run `docker compose config --quiet`, then `docker compose up -d`.
 4. Run `docker compose logs tailscale` and open its Tailscale login URL.
-5. In the Tailscale admin console, approve the new device's exit-node routes.
+5. In the [Tailscale admin console](https://login.tailscale.com/admin/machines),
+   approve the device if it needs approval. Then open its **⋯ → Edit route
+   settings**, enable **Use as exit node**, and save.
 6. Select this exit node in the Android Tailscale app.
 
 The config selects the specific Proton endpoint in your downloaded file. Replace
@@ -84,8 +92,14 @@ NAS services and host routing do not depend on this app.
 
 ## Status
 
-First TrueNAS custom-app deployment is running. Container-level checks passed:
+Tested on TrueNAS 25.10.7 with an Android client. The phone test was confirmed by
+the operator. Container-level checks passed:
 IPv4 and IPv6 public egress use the VPN; blocking its WireGuard endpoint prevents
 new IPv4, IPv6, and DNS requests; removing the block restores access. Tailscale
-authorization and exit-node route approval are complete. A separate client
-exit-node test remains pending.
+authorization and exit-node route approval are complete. A full phone-level DNS
+leak test and a disconnect test observed from the phone have not been performed.
+Other NAS platforms have not yet been tested.
+
+## License
+
+MIT. Gluetun and Tailscale container images retain their respective licenses.
