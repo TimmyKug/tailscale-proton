@@ -1,0 +1,6 @@
+.env
+secrets/
+data/
+compose.rendered.json
+__pycache__/
+.DS_Store

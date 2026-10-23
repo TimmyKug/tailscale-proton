@@ -1,0 +1,56 @@
+services:
+  gluetun:
+    image: qmcgaw/gluetun:v3.41.3
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      VPN_SERVICE_PROVIDER: custom
+      VPN_TYPE: wireguard
+      FIREWALL: "on"
+      HTTP_CONTROL_SERVER_ADDRESS: "127.0.0.1:8000"
+    volumes:
+      - type: bind
+        source: ${PROTON_CONFIG:-./secrets/proton.conf}
+        target: /gluetun/wireguard/wg0.conf
+        read_only: true
+        bind:
+          create_host_path: false
+      - ${DATA_DIR:-./data}/gluetun:/gluetun
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  tailscale:
+    image: ghcr.io/tailscale/tailscale:v1.104.2
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+        restart: true
+    environment:
+      TS_HOSTNAME: ${TS_HOSTNAME:-nas-proton}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "true"
+      TS_AUTH_ONCE: "true"
+      TS_ACCEPT_DNS: "false"
+      TS_EXTRA_ARGS: --advertise-exit-node --accept-routes=false
+      TS_BOOT_TIMEOUT: 10m
+    volumes:
+      - ${DATA_DIR:-./data}/tailscale:/var/lib/tailscale
+      - type: bind
+        source: ./config/resolv.conf
+        target: /etc/resolv.conf
+        read_only: true
+        bind:
+          create_host_path: false
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
