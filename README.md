@@ -87,4 +87,5 @@ NAS services and host routing do not depend on this app.
 First TrueNAS custom-app deployment is running. Container-level checks passed:
 IPv4 and IPv6 public egress use the VPN; blocking its WireGuard endpoint prevents
 new IPv4, IPv6, and DNS requests; removing the block restores access. Tailscale
-authorization, route approval, and a separate client exit-node test remain pending.
+authorization and exit-node route approval are complete. A separate client
+exit-node test remains pending.
