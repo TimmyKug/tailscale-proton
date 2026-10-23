@@ -1,0 +1,65 @@
+# Paste into TrueNAS Apps > Discover > Install via YAML.
+# Fill in the key and addresses from YOUR Proton WireGuard configuration.
+# This edited YAML contains credentials: keep it private.
+services:
+  gluetun:
+    image: qmcgaw/gluetun:v3.41.3
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      VPN_SERVICE_PROVIDER: protonvpn
+      VPN_TYPE: wireguard
+      WIREGUARD_PRIVATE_KEY: "PASTE_YOUR_PROTON_WIREGUARD_PRIVATE_KEY_HERE"
+      # Copy the Interface Address from the same config (including IPv6 if given).
+      WIREGUARD_ADDRESSES: "10.2.0.2/32"
+      SERVER_COUNTRIES: Germany
+      # Proton Free users: set to "on" and select a country with free servers.
+      FREE_ONLY: "off"
+      FIREWALL: "on"
+      HTTP_CONTROL_SERVER_ADDRESS: "127.0.0.1:8000"
+    volumes:
+      - gluetun-data:/gluetun
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  tailscale:
+    image: ghcr.io/tailscale/tailscale:v1.104.2
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+        restart: true
+    environment:
+      TS_HOSTNAME: nas-proton
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "true"
+      TS_AUTH_ONCE: "true"
+      TS_ACCEPT_DNS: "false"
+      TS_EXTRA_ARGS: --advertise-exit-node --accept-routes=false
+      TS_BOOT_TIMEOUT: 10m
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+    configs:
+      - source: tailscale-dns
+        target: /etc/resolv.conf
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  gluetun-data:
+  tailscale-state:
+
+configs:
+  tailscale-dns:
+    content: |
+      nameserver 127.0.0.1

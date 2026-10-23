@@ -33,6 +33,38 @@ address. Existing Proton configs may eventually need regeneration.
 
 ## TrueNAS custom app
 
+### Install entirely from the TrueNAS UI
+
+Use [truenas/compose.yaml](truenas/compose.yaml) for a self-contained install:
+
+1. Open **Apps → Discover → Install via YAML** and name the app.
+2. Paste the template into the YAML editor.
+3. Replace `WIREGUARD_PRIVATE_KEY` with `PrivateKey` from your Proton WireGuard
+   configuration. This is a WireGuard key, not your Proton account password.
+4. Set `WIREGUARD_ADDRESSES` to the `Address` value from the same config,
+   including any IPv6 address. Choose `SERVER_COUNTRIES` and a unique
+   `TS_HOSTNAME`. For Proton Free, set `FREE_ONLY` to `"on"` and choose a
+   country with free servers.
+5. Save. Open the Tailscale container's logs to get its login link, authorize
+   the device, and approve its exit-node routes as described above.
+
+No SSH, `.env`, uploaded config file, or Compose rendering command is needed.
+TrueNAS manages persistent named volumes for VPN data and Tailscale identity.
+Keep those volumes when removing/reinstalling the app if you want to retain
+its identity, and include them in your backup plan.
+
+Credentials entered in the YAML are saved in the app configuration and visible
+to administrators; this is not a masked credential form. Keep edited YAML and
+configuration backups private. Native labeled and masked fields require a
+TrueNAS app configuration schema, which is the catalog-packaging step.
+
+This variant uses Gluetun's Proton integration to select a server in your chosen
+country. The file-based variant below uses the exact endpoint in the downloaded
+configuration. The UI template has been Compose-validated; live testing so far
+used the file-based variant. Both are custom apps, not catalog applications.
+
+### Install using files on persistent storage
+
 Keep the project and credentials on persistent storage, outside the managed
 `ix-apps` directories. Set absolute paths in `.env` for storage and the config.
 Render the Compose configuration with:
@@ -74,7 +106,9 @@ Use the TrueNAS Apps controls when deployed as a custom app. With ordinary
 Compose use `docker compose up -d`, `logs`, and `stop`. After updating/recreating
 Gluetun, recreate both services together so they share the current namespace.
 
-Back up `.env`, the Proton config and `data/tailscale/` securely. Tailscale state
+For the file-based install, back up `.env`, the Proton config and `data/tailscale/`
+securely. For the UI install, back up the app configuration and named volumes.
+Tailscale state
 contains the device identity: never share it between installations. Losing that
 state requires logging in and approving a new node. Do not publish credentials,
 state, or unreviewed logs.
